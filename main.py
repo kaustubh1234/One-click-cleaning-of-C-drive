@@ -10,6 +10,8 @@ import os
 import logging
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import threading
+import queue
 from config import APP_NAME, VERSION
 from cleaner_logic import CleanerLogic
 from backup_manager import BackupManagerWindow
@@ -166,20 +168,48 @@ class CleanerApp(tk.Tk):
         self.progress_bar.start()
         self.status_label.config(text="正在扫描系统，请稍候...")
 
-        # 使用after方法在后台执行扫描
-        self.after(100, self.perform_scan)
+        # 创建一个队列用于线程通信
+        self.scan_queue = queue.Queue()
+        
+        # 创建并启动扫描线程
+        scan_thread = threading.Thread(target=self._scan_thread_task)
+        scan_thread.daemon = True  # 设置为守护线程，随主线程退出而退出
+        scan_thread.start()
+        
+        # 定期检查队列
+        self.after(100, self._check_scan_queue)
 
-    def perform_scan(self):
-        """执行扫描操作"""
+    def _scan_thread_task(self):
+        """在单独的线程中执行扫描任务"""
         try:
-            self.scan_results = self.cleaner.scan_system()
-            self.after(100, self.on_scan_finished)
+            # 执行扫描
+            results = self.cleaner.scan_system()
+            # 将结果放入队列
+            self.scan_queue.put(('success', results))
         except Exception as e:
+            # 出现异常时，将异常信息放入队列
             logger.error(f"扫描过程中出错: {e}")
-            messagebox.showerror("扫描错误", f"扫描过程中出错: {e}")
-            self.progress_bar.stop()
-            self.progress_bar.pack_forget()
-            self.scan_button.config(state=tk.NORMAL)
+            self.scan_queue.put(('error', str(e)))
+
+    def _check_scan_queue(self):
+        """检查扫描线程队列"""
+        try:
+            # 非阻塞式获取，如果没有数据会抛出queue.Empty异常
+            status, data = self.scan_queue.get_nowait()
+            
+            # 扫描完成或出错
+            if status == 'success':
+                self.scan_results = data
+                self.on_scan_finished()
+            elif status == 'error':
+                messagebox.showerror("扫描错误", f"扫描过程中出错: {data}")
+                self.progress_bar.stop()
+                self.progress_bar.pack_forget()
+                self.scan_button.config(state=tk.NORMAL)
+                
+        except queue.Empty:
+            # 队列为空，说明扫描还在进行，继续等待
+            self.after(100, self._check_scan_queue)
 
     def on_scan_finished(self):
         """扫描完成后的处理"""
@@ -294,106 +324,235 @@ class CleanerApp(tk.Tk):
     def start_clean(self):
         """开始清理选中的项目"""
         # 获取选中的项目
-        selected_ids = self.result_tree.selection()
-        if not selected_ids:
-            messagebox.showinfo("提示", "请先选择要清理的项目")
-            return
-
-        # 收集选中的项目数据
         self.selected_items = []
-        for item_id in selected_ids:
-            # 检查是否是文件项目（不是类别）
-            parent_id = self.result_tree.parent(item_id)
-            if parent_id:  # 如果有父节点，说明是文件项目
-                path = self.result_tree.item(item_id, "values")[2]
-                # 在scan_results中查找对应的项目
-                for category in self.scan_results.values():
-                    for item in category:
-                        if item['path'] == path:
+        
+        # 获取 categories 字典，与 populate_results_tree 方法中定义的一致
+        categories = {
+            # 基本清理
+            'temp': "临时文件",
+            'recycle': "回收站",
+            'cache': "浏览器缓存",
+            'logs': "系统日志",
+            'updates': "Windows更新缓存",
+            'thumbnails': "缩略图缓存",
+
+            # 扩展清理
+            'prefetch': "预读取文件",
+            'old_windows': "旧Windows文件",
+            'error_reports': "错误报告",
+            'service_packs': "服务包备份",
+            'memory_dumps': "内存转储文件",
+            'font_cache': "字体缓存",
+            'disk_cleanup': "磁盘清理备份",
+
+            # 新增安全清理项
+            'app_cache': "应用程序缓存",
+            'media_cache': "媒体播放器缓存",
+            'search_index': "搜索索引临时文件",
+            'backup_temp': "备份临时文件",
+            'update_temp': "更新临时文件",
+            'driver_backup': "驱动备份",
+            'app_crash': "应用程序崩溃转储",
+            'app_logs': "应用程序日志",
+            'recent_items': "最近使用的文件列表",
+            'notification': "Windows通知缓存",
+            'dns_cache': "DNS缓存",
+            'network_cache': "网络缓存",
+            'printer_temp': "打印机临时文件",
+            'device_temp': "设备临时文件",
+            'windows_defender': "Windows Defender缓存",
+            'store_cache': "Windows Store缓存",
+            'onedrive_cache': "OneDrive缓存",
+
+            # 新增用户请求的清理项
+            'downloads': "下载文件夹(立即清理)",
+            'installer_cache': "安装程序缓存(30天前)",
+            'delivery_opt': "Windows传递优化缓存(立即清理)",
+
+            # 大文件扫描
+            'large_files': "大文件"
+        }
+        
+        # 使用反向映射从显示名称找到类别键
+        display_to_key = {v: k for k, v in categories.items()}
+        
+        for category_id in self.result_tree.get_children():
+            for item_id in self.result_tree.get_children(category_id):
+                if self.result_tree.item(item_id, 'values')[-1] == '是':  # 检查"选中"列
+                    # 从结果数据中找到对应的项目
+                    category = self.result_tree.item(category_id, 'text').split()[0]  # 获取分类名称
+                    category_key = display_to_key.get(category)
+                    if not category_key:
+                        continue
+
+                    item_path = self.result_tree.item(item_id, 'values')[2]  # 路径在第三列
+                    for item in self.scan_results.get(category_key, []):
+                        if item['path'] == item_path:
                             self.selected_items.append(item)
                             break
 
         if not self.selected_items:
-            messagebox.showinfo("提示", "请选择具体的文件或目录进行清理")
+            messagebox.showinfo("清理", "请先选择需要清理的项目")
             return
 
-        # 确认对话框
-        total_size = sum(item['size'] for item in self.selected_items)
-        if self.simulate_var.get():
-            message = f"您选择了模拟模式，将会模拟清理 {len(self.selected_items)} 个项目，总计 {self.format_size(total_size)}。"
-        else:
-            message = f"您确定要清理 {len(self.selected_items)} 个项目，总计 {self.format_size(total_size)} 吗？\n此操作无法撤销！"
-
-        if not messagebox.askyesno("确认清理", message):
-            return
-
-        # 设置清理选项
-        self.cleaner.set_options({
+        # 获取选项
+        options = {
             'simulate': self.simulate_var.get(),
             'backup': self.backup_var.get(),
             'backup_dir': self.backup_dir_var.get()
-        })
+        }
+        self.cleaner.set_options(options)
 
-        # 开始清理
+        # 确认清理
+        if not options['simulate']:
+            confirm = messagebox.askyesno("确认清理", 
+                                        f"您确定要清理选中的 {len(self.selected_items)} 个项目吗？\n"
+                                        f"这将永久删除这些文件。")
+            if not confirm:
+                return
+
+        # 禁用按钮
         self.scan_button.config(state=tk.DISABLED)
         self.clean_button.config(state=tk.DISABLED)
+        self.clean_all_button.config(state=tk.DISABLED)
         self.select_all_button.config(state=tk.DISABLED)
         self.deselect_all_button.config(state=tk.DISABLED)
+
+        # 显示进度
         self.progress_bar.pack(fill=tk.X)
         self.progress_bar.start()
-        self.status_label.config(text="正在清理文件，请稍候...")
+        self.status_label.config(text="正在清理，请稍候...")
 
-        # 使用after方法在后台执行清理
-        self.after(100, self.perform_clean)
+        # 创建一个队列用于线程通信
+        self.clean_queue = queue.Queue()
+        
+        # 创建并启动清理线程
+        clean_thread = threading.Thread(target=self._clean_thread_task)
+        clean_thread.daemon = True
+        clean_thread.start()
+        
+        # 定期检查队列
+        self.after(100, self._check_clean_queue)
 
-    def perform_clean(self):
-        """执行清理操作"""
+    def _clean_thread_task(self):
+        """在单独的线程中执行清理任务"""
         try:
             results = self.cleaner.clean_selected(self.selected_items)
-            self.after(100, lambda: self.on_clean_finished(results))
+            self.clean_queue.put(('success', results))
         except Exception as e:
             logger.error(f"清理过程中出错: {e}")
-            messagebox.showerror("清理错误", f"清理过程中出错: {e}")
-            self.progress_bar.stop()
-            self.progress_bar.pack_forget()
-            self.scan_button.config(state=tk.NORMAL)
-            self.clean_button.config(state=tk.NORMAL)
-            self.clean_all_button.config(state=tk.NORMAL)
+            self.clean_queue.put(('error', str(e)))
 
-    def perform_clean_all(self):
-        """执行一键清理操作"""
+    def _check_clean_queue(self):
+        """检查清理线程队列"""
         try:
-            # 先扫描系统
-            self.scan_results = self.cleaner.scan_system()
-
-            # 准备所有项目的列表
-            all_items = []
-            for category_items in self.scan_results.values():
-                all_items.extend(category_items)
-
-            # 如果没有可清理项目
-            if not all_items:
+            status, data = self.clean_queue.get_nowait()
+            
+            if status == 'success':
+                self.on_clean_finished(data)
+            elif status == 'error':
+                messagebox.showerror("清理错误", f"清理过程中出错: {data}")
                 self.progress_bar.stop()
                 self.progress_bar.pack_forget()
                 self.scan_button.config(state=tk.NORMAL)
+                self.clean_button.config(state=tk.NORMAL)
                 self.clean_all_button.config(state=tk.NORMAL)
-                self.status_label.config(text="扫描完成，未发现可清理项目")
+                self.select_all_button.config(state=tk.NORMAL)
+                self.deselect_all_button.config(state=tk.NORMAL)
+                
+        except queue.Empty:
+            self.after(100, self._check_clean_queue)
+
+    def perform_clean(self):
+        """已弃用的方法，保留以防止引用错误"""
+        pass
+
+    def start_clean_all(self):
+        """开始一键清理所有项目"""
+        if not any(self.scan_results.values()):
+            messagebox.showinfo("清理", "没有可清理的项目")
+            return
+
+        # 将所有项目加入选择列表
+        all_items = []
+        for category, items in self.scan_results.items():
+            all_items.extend(items)
+
+        if not all_items:
+            messagebox.showinfo("清理", "没有可清理的项目")
+            return
+
+        # 获取选项
+        options = {
+            'simulate': self.simulate_var.get(),
+            'backup': self.backup_var.get(),
+            'backup_dir': self.backup_dir_var.get()
+        }
+        self.cleaner.set_options(options)
+
+        # 确认清理
+        if not options['simulate']:
+            confirm = messagebox.askyesno("确认一键清理", 
+                                        f"您确定要清理所有 {len(all_items)} 个项目吗？\n"
+                                        f"这将永久删除这些文件。")
+            if not confirm:
                 return
 
-            # 显示清理进度
-            total_size = sum(item['size'] for item in all_items)
-            self.status_label.config(text=f"正在清理 {len(all_items)} 个项目，总计 {self.format_size(total_size)}...")
+        # 禁用按钮
+        self.scan_button.config(state=tk.DISABLED)
+        self.clean_button.config(state=tk.DISABLED)
+        self.clean_all_button.config(state=tk.DISABLED)
+        self.select_all_button.config(state=tk.DISABLED)
+        self.deselect_all_button.config(state=tk.DISABLED)
 
-            # 执行清理
-            results = self.cleaner.clean_selected(all_items)
-            self.after(100, lambda: self.on_clean_all_finished(results))
+        # 显示进度
+        self.progress_bar.pack(fill=tk.X)
+        self.progress_bar.start()
+        self.status_label.config(text="正在清理，请稍候...")
+
+        # 创建一个队列用于线程通信
+        self.clean_all_queue = queue.Queue()
+        
+        # 创建并启动清理线程
+        clean_all_thread = threading.Thread(target=lambda: self._clean_all_thread_task(all_items))
+        clean_all_thread.daemon = True
+        clean_all_thread.start()
+        
+        # 定期检查队列
+        self.after(100, self._check_clean_all_queue)
+
+    def _clean_all_thread_task(self, items):
+        """在单独的线程中执行一键清理任务"""
+        try:
+            results = self.cleaner.clean_selected(items)
+            self.clean_all_queue.put(('success', results))
         except Exception as e:
             logger.error(f"一键清理过程中出错: {e}")
-            messagebox.showerror("清理错误", f"一键清理过程中出错: {e}")
-            self.progress_bar.stop()
-            self.progress_bar.pack_forget()
-            self.scan_button.config(state=tk.NORMAL)
-            self.clean_all_button.config(state=tk.NORMAL)
+            self.clean_all_queue.put(('error', str(e)))
+
+    def _check_clean_all_queue(self):
+        """检查一键清理线程队列"""
+        try:
+            status, data = self.clean_all_queue.get_nowait()
+            
+            if status == 'success':
+                self.on_clean_all_finished(data)
+            elif status == 'error':
+                messagebox.showerror("清理错误", f"一键清理过程中出错: {data}")
+                self.progress_bar.stop()
+                self.progress_bar.pack_forget()
+                self.scan_button.config(state=tk.NORMAL)
+                self.clean_button.config(state=tk.NORMAL)
+                self.clean_all_button.config(state=tk.NORMAL)
+                self.select_all_button.config(state=tk.NORMAL)
+                self.deselect_all_button.config(state=tk.NORMAL)
+                
+        except queue.Empty:
+            self.after(100, self._check_clean_all_queue)
+
+    def perform_clean_all(self):
+        """已弃用的方法，保留以防止引用错误"""
+        pass
 
     def on_clean_finished(self, results):
         """清理完成后的处理"""
@@ -425,9 +584,6 @@ class CleanerApp(tk.Tk):
         # 更新磁盘信息
         self.update_disk_info()
 
-        # 重新扫描
-        self.start_scan()
-
     def on_clean_all_finished(self, results):
         """一键清理完成后的处理"""
         self.progress_bar.stop()
@@ -456,13 +612,20 @@ class CleanerApp(tk.Tk):
             messagebox.showwarning("清理错误", f"清理过程中发生 {len(errors)} 个错误\n\n{error_details}")
 
         # 显示清理结果
-        messagebox.showinfo("清理完成", f"一键清理完成\n\n已释放空间: {self.format_size(freed_space)}\n错误数量: {len(errors)}")
-
-        # 更新磁盘信息
-        self.update_disk_info()
-
-        # 重新扫描
-        self.start_scan()
+        if not self.simulate_var.get():  # 非模拟模式下询问是否重新扫描
+            result = messagebox.askquestion("清理完成", 
+                                         f"一键清理完成\n\n已释放空间: {self.format_size(freed_space)}\n错误数量: {len(errors)}\n\n是否需要重新扫描系统?")
+            # 更新磁盘信息
+            self.update_disk_info()
+            
+            # 仅当用户确认时才重新扫描
+            if result == 'yes':
+                self.start_scan()
+        else:
+            # 模拟模式下只显示结果，不询问重新扫描
+            messagebox.showinfo("清理完成", f"模拟清理完成\n\n可释放空间: {self.format_size(freed_space)}\n错误数量: {len(errors)}")
+            # 更新磁盘信息
+            self.update_disk_info()
 
     @staticmethod
     def format_size(size_bytes):
@@ -513,33 +676,6 @@ class CleanerApp(tk.Tk):
 
         # 更新清理按钮状态
         self.clean_button.config(state=tk.DISABLED)
-
-    def start_clean_all(self):
-        """一键清理所有项目"""
-        # 确认对话框
-        if not messagebox.askyesno("确认清理", "一键清理将清理所有可清理项目，确定要继续吗？"):
-            return
-
-        # 先扫描系统
-        self.scan_button.config(state=tk.DISABLED)
-        self.clean_all_button.config(state=tk.DISABLED)
-        self.clean_button.config(state=tk.DISABLED)
-        self.select_all_button.config(state=tk.DISABLED)
-        self.deselect_all_button.config(state=tk.DISABLED)
-        self.result_tree.delete(*self.result_tree.get_children())
-        self.progress_bar.pack(fill=tk.X)
-        self.progress_bar.start()
-        self.status_label.config(text="正在扫描系统，请稍候...")
-
-        # 设置清理选项
-        self.cleaner.set_options({
-            'simulate': self.simulate_var.get(),
-            'backup': self.backup_var.get(),
-            'backup_dir': self.backup_dir_var.get()
-        })
-
-        # 使用after方法在后台执行扫描和清理
-        self.after(100, self.perform_clean_all)
 
 def main():
     """应用程序入口点"""
