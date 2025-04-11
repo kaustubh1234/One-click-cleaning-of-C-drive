@@ -12,6 +12,7 @@ import time
 import glob
 import logging
 import datetime
+import concurrent.futures
 
 # 配置日志
 logging.basicConfig(
@@ -328,47 +329,59 @@ class CleanerLogic:
             'large_files': []    # 大文件
         }
 
-        # 基本清理
-        self._scan_temp_files(results)        # 临时文件
-        self._scan_recycle_bin(results)       # 回收站
-        self._scan_browser_cache(results)     # 浏览器缓存
-        self._scan_system_logs(results)       # 系统日志
-        self._scan_windows_updates(results)   # Windows更新缓存
-        self._scan_thumbnails_cache(results)  # 缩略图缓存
+        # 定义扫描任务
+        scan_tasks = [
+            self._scan_temp_files,
+            self._scan_recycle_bin,
+            self._scan_browser_cache,
+            self._scan_system_logs,
+            self._scan_windows_updates,
+            self._scan_thumbnails_cache,
+            self._scan_prefetch,
+            self._scan_old_windows,
+            self._scan_error_reports,
+            self._scan_service_packs,
+            self._scan_memory_dumps,
+            self._scan_font_cache,
+            self._scan_disk_cleanup_backup,
+            self._scan_app_cache,
+            self._scan_media_cache,
+            self._scan_search_index,
+            self._scan_backup_temp,
+            self._scan_update_temp,
+            self._scan_driver_backup,
+            self._scan_app_crash,
+            self._scan_app_logs,
+            self._scan_recent_items,
+            self._scan_notification_cache,
+            self._scan_dns_cache,
+            self._scan_printer_temp,
+            self._scan_device_temp,
+            self._scan_windows_defender,
+            self._scan_store_cache,
+            self._scan_onedrive_cache,
+            self._scan_downloads_immediate,
+            self._scan_installer_cache_safe,
+            self._scan_delivery_optimization, # Ensure this is the correct one
+            self._scan_large_files
+        ]
 
-        # 扩展清理 (已移除休眠文件、传递优化缓存、下载文件夹和安装程序缓存)
-        self._scan_prefetch(results)          # 预读取文件
-        self._scan_old_windows(results)       # 旧Windows文件
-        self._scan_error_reports(results)     # 错误报告
-        self._scan_service_packs(results)     # 服务包备份
-        self._scan_memory_dumps(results)      # 内存转储文件
-        self._scan_font_cache(results)        # 字体缓存
-        self._scan_disk_cleanup_backup(results) # 磁盘清理备份
+        # 使用ThreadPoolExecutor并发运行扫描任务
+        # 根据测试调整max_workers，None通常默认为os.cpu_count（）*5
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            # 提交所有任务
+            future_to_task = {executor.submit(task, results): task for task in scan_tasks}
 
-        # 新增安全清理项
-        self._scan_app_cache(results)         # 应用程序缓存
-        self._scan_media_cache(results)       # 媒体播放器缓存
-        self._scan_search_index(results)      # 搜索索引临时文件
-        self._scan_backup_temp(results)       # 备份临时文件
-        self._scan_update_temp(results)       # 更新临时文件
-        self._scan_driver_backup(results)     # 驱动备份
-        self._scan_app_crash(results)         # 应用程序崩溃转储
-        self._scan_app_logs(results)          # 应用程序日志
-        self._scan_recent_items(results)      # 最近使用的文件列表缓存
-        self._scan_notification_cache(results) # Windows通知缓存
-        self._scan_dns_cache(results)         # DNS缓存
-        self._scan_printer_temp(results)      # 打印机临时文件
-        self._scan_device_temp(results)       # 设备临时文件
-        self._scan_windows_defender(results)  # Windows Defender缓存
-        self._scan_store_cache(results)       # Windows Store缓存
-        self._scan_onedrive_cache(results)    # OneDrive缓存
+            # 等待所有任务完成并处理潜在的异常
+            for future in concurrent.futures.as_completed(future_to_task):
+                task_func = future_to_task[future]
+                try:
+                    future.result()  # 任务期间发生的任何异常
+                    logger.info(f"Task {task_func.__name__} completed successfully.")
+                except Exception as exc:
+                    logger.error(f'Task {task_func.__name__} generated an exception: {exc}')
 
-        # 新增用户请求的清理项
-        self._scan_downloads_immediate(results)    # 下载文件夹(立即清理)
-        self._scan_installer_cache_safe(results) # 安装程序缓存(30天前)
-
-        # 大文件扫描
-        self._scan_large_files(results)       # 大文件
+        # 结果字典由任务直接填充
 
         logger.info(f"扫描完成，找到 {sum(len(items) for items in results.values())} 个可清理项目")
         return results
@@ -778,7 +791,8 @@ class CleanerLogic:
                             try:
                                 file_path = os.path.join(root, file)
                                 if os.path.isfile(file_path):
-                                    total_size += os.path.getsize(file_path)
+                                    file_size = os.path.getsize(file_path)
+                                    total_size += file_size
                             except (PermissionError, FileNotFoundError):
                                 pass
 
@@ -1627,37 +1641,6 @@ class CleanerLogic:
             except (PermissionError, FileNotFoundError) as e:
                 logger.warning(f"无法访问Windows Installer目录 {windows_installer}: {e}")
 
-    def _scan_delivery_optimization(self, results):
-        """扫描Windows传递优化缓存"""
-        # Windows传递优化缓存目录
-        delivery_opt_dirs = [
-            os.path.join('C:', os.sep, 'Windows', 'ServiceProfiles', 'NetworkService', 'AppData', 'Local', 'Microsoft', 'Windows', 'DeliveryOptimization', 'Cache'),
-            os.path.join('C:', os.sep, 'Windows', 'SoftwareDistribution', 'DeliveryOptimization', 'Cache')
-        ]
-
-        for opt_dir in delivery_opt_dirs:
-            if os.path.exists(opt_dir) and self._is_safe_path(opt_dir):
-                try:
-                    total_size = 0
-                    for root, _, files in os.walk(opt_dir):
-                        for file in files:
-                            try:
-                                file_path = os.path.join(root, file)
-                                if os.path.isfile(file_path):
-                                    file_size = os.path.getsize(file_path)
-                                    total_size += file_size
-                            except (PermissionError, FileNotFoundError):
-                                pass
-
-                    if total_size > 0:
-                        results['delivery_opt'].append({
-                            'path': opt_dir,
-                            'size': total_size,
-                            'type': 'delivery_opt'
-                        })
-                except (PermissionError, FileNotFoundError) as e:
-                    logger.warning(f"无法访问Windows传递优化缓存 {opt_dir}: {e}")
-
     def _scan_large_files(self, results):
         """扫描C盘中的大文件"""
         # 大文件的最小大小（100MB）
@@ -1732,116 +1715,6 @@ class CleanerLogic:
         results['large_files'].extend(large_files)
 
         logger.info(f"找到 {len(large_files)} 个大文件")
-
-    def _scan_app_crash(self, results):
-        """扫描应用程序崩溃转储"""
-        # 应用程序崩溃转储目录
-        app_crash_dirs = [
-            os.path.join('C:', os.sep, 'ProgramData', 'Microsoft', 'Windows', 'WER', 'ReportArchive'),
-            os.path.join('C:', os.sep, 'ProgramData', 'Microsoft', 'Windows', 'WER', 'ReportQueue'),
-            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'CrashDumps'),
-            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Microsoft', 'Windows', 'WER', 'ReportArchive'),
-            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Microsoft', 'Windows', 'WER', 'ReportQueue')
-        ]
-
-        for crash_dir in app_crash_dirs:
-            if os.path.exists(crash_dir) and self._is_safe_path(crash_dir):
-                try:
-                    total_size = 0
-                    for root, _, files in os.walk(crash_dir):
-                        for file in files:
-                            try:
-                                file_path = os.path.join(root, file)
-                                if os.path.isfile(file_path):
-                                    file_size = os.path.getsize(file_path)
-                                    total_size += file_size
-                            except (PermissionError, FileNotFoundError):
-                                pass
-
-                    if total_size > 0:
-                        results['app_crash'].append({
-                            'path': crash_dir,
-                            'size': total_size,
-                            'type': 'app_crash'
-                        })
-                except (PermissionError, FileNotFoundError) as e:
-                    logger.warning(f"无法访问应用程序崩溃转储目录 {crash_dir}: {e}")
-
-    def _scan_app_logs(self, results):
-        """扫描应用程序日志"""
-        # 常见应用程序日志目录
-        app_log_dirs = [
-            os.path.join(os.environ.get('APPDATA', ''), 'Microsoft', 'Teams', 'logs.txt'),
-            os.path.join(os.environ.get('APPDATA', ''), 'Microsoft', 'Teams', 'logs'),
-            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Microsoft', 'Office', '*.log'),
-            os.path.join(os.environ.get('APPDATA', ''), 'Slack', 'logs'),
-            os.path.join(os.environ.get('APPDATA', ''), 'discord', 'logs'),
-            os.path.join('C:', os.sep, 'ProgramData', 'Microsoft', 'Windows Defender', 'Support'),
-            os.path.join('C:', os.sep, 'Windows', 'Logs'),
-            os.path.join('C:', os.sep, 'inetpub', 'logs')
-        ]
-
-        # 超过30天的日志文件
-        old_threshold = datetime.datetime.now() - datetime.timedelta(days=30)
-
-        for log_dir in app_log_dirs:
-            # 处理通配符模式
-            if '*' in log_dir:
-                try:
-                    for matched_path in glob.glob(log_dir):
-                        if os.path.exists(matched_path) and self._is_safe_path(matched_path):
-                            try:
-                                if os.path.isfile(matched_path):
-                                    # 检查是否是旧文件
-                                    mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(matched_path))
-                                    if mod_time < old_threshold:
-                                        file_size = os.path.getsize(matched_path)
-                                        if file_size > 0:
-                                            results['app_logs'].append({
-                                                'path': matched_path,
-                                                'size': file_size,
-                                                'type': 'app_logs'
-                                            })
-                            except (PermissionError, FileNotFoundError) as e:
-                                logger.warning(f"无法访问应用程序日志文件 {matched_path}: {e}")
-                except Exception as e:
-                    logger.warning(f"处理通配符模式时出错 {log_dir}: {e}")
-                continue
-
-            # 处理普通目录
-            if os.path.exists(log_dir) and self._is_safe_path(log_dir):
-                try:
-                    if os.path.isfile(log_dir):
-                        # 如果是文件
-                        mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(log_dir))
-                        if mod_time < old_threshold:
-                            file_size = os.path.getsize(log_dir)
-                            if file_size > 0:
-                                results['app_logs'].append({
-                                    'path': log_dir,
-                                    'size': file_size,
-                                    'type': 'app_logs'
-                                })
-                    else:
-                        # 如果是目录
-                        for root, _, files in os.walk(log_dir):
-                            for file in files:
-                                try:
-                                    file_path = os.path.join(root, file)
-                                    if os.path.isfile(file_path):
-                                        # 检查是否是旧文件
-                                        mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
-                                        if mod_time < old_threshold:
-                                            file_size = os.path.getsize(file_path)
-                                            results['app_logs'].append({
-                                                'path': file_path,
-                                                'size': file_size,
-                                                'type': 'app_logs'
-                                            })
-                                except (PermissionError, FileNotFoundError):
-                                    pass
-                except (PermissionError, FileNotFoundError) as e:
-                    logger.warning(f"无法访问应用程序日志 {log_dir}: {e}")
 
     def clean_selected(self, items, progress_callback=None):
         """清理选中的项目"""

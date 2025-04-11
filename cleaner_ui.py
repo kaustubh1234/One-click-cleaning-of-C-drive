@@ -317,9 +317,6 @@ class CleanerMainWindow(QMainWindow):
         
         # 更新磁盘信息
         self.update_disk_info()
-        
-        # 重新扫描
-        self.start_scan()
     
     @staticmethod
     def format_size(size_bytes):
